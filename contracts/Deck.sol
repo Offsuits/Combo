@@ -4,6 +4,9 @@ contract Deck {
 
 	mapping (uint => Card) deck;
     mapping (uint => Player) players;
+    Game game;
+    event SendStack(int chips, uint seat);
+    event Deal();
 
 
     struct Card {
@@ -15,24 +18,72 @@ contract Deck {
         Card card;
         int8 active;
         int chips;
-        //uint seat;
+        int currentBet;
+    }
+
+    struct Game {
+        int pot;
+        uint action;
+        uint raiser;
+        uint dealer;
+        int amountToCall;
     }
 
     function sitDown(uint seat, int chips) {
         players[seat].active = 2;
         players[seat].chips = chips;
+        SendStack(players[seat].chips, seat);
     }
 
     function standUp(uint seat) {
         players[seat].active = 0;
+        players[seat].chips = 0;
+        SendStack(players[seat].chips, seat);
     }
 
     function playerActive(uint seat) constant returns(int8) {
         return players[seat].active;
     }
 
+    function initGame() {
+        game.pot = 0;
+
+        if(game.dealer == 3){
+            game.action = 1; 
+            game.dealer = 0;
+        } else {
+            game.dealer++;
+
+            if(game.dealer == 3) {
+                game.action = 0;
+            } else {
+                game.action = game.dealer + 1;
+            }
+        }
+
+        while(players[game.action].active != 2) {
+            if(game.action == 3){
+                game.action = 0; 
+            } else {
+                game.action++;
+            }
+         
+        }
+    }
+
+    function deal() {
+        Deal();
+    }
+
+    function nextToAction() {
+
+    }
+
 	function calcWinner() constant returns(string) {
         uint seat = winner();
+        players[seat].chips += game.pot;
+        game.pot = 0;
+        SendStack(players[seat].chips, seat);
 
         return players[seat].card.card;
 	}
@@ -41,7 +92,7 @@ contract Deck {
 		uint winner;
         uint score = 52;
         for(var i = 0; i < 4; i++) {
-            if(players[i].active == 1 && players[i].card.rank < score) {
+            if(players[i].active == 2 && players[i].card.rank < score) {
                 winner = i;
                 score = players[i].card.rank;
             }
@@ -50,11 +101,14 @@ contract Deck {
         return winner;
 	}
 
-    event SendStack(int chips);
+    
 
     function bet(int amount, uint seat) {
         players[seat].chips = players[seat].chips - amount;
-        SendStack(players[seat].chips);
+        players[seat].currentBet += amount;
+        game.pot += amount;
+        game.amountToCall = players[seat].currentBet;
+        SendStack(players[seat].chips, seat);
     }
 
 	function getCard(uint index) constant returns(string) {
@@ -118,6 +172,8 @@ contract Deck {
             players[index].active = 0;
             index++;
         }
+
+          game.dealer = 0;
 	}
 
 	function rand(uint max) returns(uint) {
@@ -170,6 +226,3 @@ contract Deck {
 	// }
 
 }
-
-
-

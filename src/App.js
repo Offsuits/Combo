@@ -23,15 +23,15 @@ class App extends Component {
       storageValue: 0,
       web3: null,
       result: null,
-      storageInstance: null,
       deckInstance: null,
       account: null,
       seat1: 'nobus/flipside.png',
       seat2: 'nobus/flipside.png',
       seat3: 'nobus/flipside.png',
       seat4: 'nobus/flipside.png',
-      stack: 1000,
+      stack: [0, 0, 0, 0],
     };
+
 
     this.mySeat = -1;
 
@@ -65,26 +65,26 @@ class App extends Component {
 
   instantiateContract() {
 
-    simpleStorage.setProvider(this.state.web3.currentProvider);
-    deck.setProvider(this.state.web3.currentProvider);
 
-    // Declaring this for later so we can chain functions on SimpleStorage.
-    var simpleStorageInstance
+    deck.setProvider(this.state.web3.currentProvider);
 
     // Get accounts.
     this.state.web3.eth.getAccounts((error, accounts) => {
       this.setState({account: accounts[1]})
-
-      simpleStorage.deployed().then((instance) => {
-        simpleStorageInstance = instance
-        this.setState({storageInstance: simpleStorageInstance});
-      })
     
       deck.deployed().then((instance)=>{
         this.setState({ deckInstance: instance });
         instance.SendStack().watch((err, event) => {
           console.log(event.args.chips.toNumber());
+
+          var temp = this.state.stack.slice();
+          temp[event.args.seat.toNumber()] = event.args.chips.toNumber();
+          this.setState({stack: temp.slice()});
         });
+
+        instance.Deal().watch((err, event) => {
+          this.deal();
+        })
       })
     })
   }
@@ -108,64 +108,94 @@ class App extends Component {
     this.state.deckInstance.calcWinner().then((card) => { 
       this.setState({ myCard: 'nobus/' + card + '.png' });
     });
+
+    this.state.deckInstance.playerActive(0).then((bactive) => {  
+      var active = bactive.toNumber();
+      if(active === 2) {
+        this.state.deckInstance.getCard(0).then((result) => this.setState({seat1: 'nobus/' + result + '.png' }));
+      }
+    });
+
+    this.state.deckInstance.playerActive(1).then((bactive) => {  
+      var active = bactive.toNumber();
+      if(active === 2) {
+        this.state.deckInstance.getCard(1).then((result) => this.setState({seat2: 'nobus/' + result + '.png' }));
+      }
+    });
+
+    this.state.deckInstance.playerActive(2).then((bactive) => {  
+      var active = bactive.toNumber();
+      if(active === 2) {
+        this.state.deckInstance.getCard(2).then((result) => this.setState({seat3: 'nobus/' + result + '.png' }));
+      }
+    });
+
+    this.state.deckInstance.playerActive(3).then((bactive) => {  
+      var active = bactive.toNumber();
+
+      console.log(active);
+      if(active === 2) {
+        this.state.deckInstance.getCard(3).then((result) => this.setState({seat4: 'nobus/' + result + '.png' }));
+      }
+    });
   }
 
   shuffle() {
     this.state.deckInstance.shuffle({gas: 4000000}).then( () => {
-      //this.deal();
+      this.state.deckInstance.deal();
     })
   }
 
   deal() {  
-    this.state.deckInstance.playerActive(0).then((bactive) => {  
-      var active = bactive.toNumber();
-      console.log(bactive.toNumber());
-      if(this.mySeat === 1 && active === 2) {
-        this.setState({seat1: 'nobus/flipside.png'});
-      } else if(active === 2) {
-        this.state.deckInstance.getCard(0).then((result) => this.setState({seat1: 'nobus/' + result + '.png' }));
-      } else {
-        this.setState({seat1: 'nobus/blank.png' });
-      }
-    })
-    
-    this.state.deckInstance.playerActive(1).then((bactive) => {  
-      var active = bactive.toNumber();
-      if(this.mySeat === 2 && active === 2) {
-        this.setState({seat2: 'nobus/flipside.png'});
-      } else if(active === 2) {
-        this.state.deckInstance.getCard(1).then((result) => this.setState({seat2: 'nobus/' + result + '.png' }));
-      } else {
-        this.setState({seat2: 'nobus/blank.png'});
-      }
-    })
+    this.state.deckInstance.initGame().then(() => { 
+      this.state.deckInstance.playerActive(0).then((bactive) => {  
+        var active = bactive.toNumber();
+        if(this.mySeat === 1 && active === 2) {
+          this.setState({seat1: 'nobus/flipside.png'});
+        } else if(active === 2) {
+          this.state.deckInstance.getCard(0).then((result) => this.setState({seat1: 'nobus/' + result + '.png' }));
+        } else {
+          this.setState({seat1: 'nobus/blank.png' });
+        }
+      })
+      
+      this.state.deckInstance.playerActive(1).then((bactive) => {  
+        var active = bactive.toNumber();
+        if(this.mySeat === 2 && active === 2) {
+          this.setState({seat2: 'nobus/flipside.png'});
+        } else if(active === 2) {
+          this.state.deckInstance.getCard(1).then((result) => this.setState({seat2: 'nobus/' + result + '.png' }));
+        } else {
+          this.setState({seat2: 'nobus/blank.png'});
+        }
+      })
 
-    this.state.deckInstance.playerActive(2).then((bactive) => {  
-      var active = bactive.toNumber();
-      if(this.mySeat === 3 && active === 2) {
-        this.setState({seat3: 'nobus/flipside.png'});
-      } else if(active === 2) {
-        this.state.deckInstance.getCard(2).then((result) => this.setState({seat3: 'nobus/' + result + '.png' }));
-      } else {
-        this.setState({seat3: 'nobus/blank.png'});
-      }
-    })
+      this.state.deckInstance.playerActive(2).then((bactive) => {  
+        var active = bactive.toNumber();
+        if(this.mySeat === 3 && active === 2) {
+          this.setState({seat3: 'nobus/flipside.png'});
+        } else if(active === 2) {
+          this.state.deckInstance.getCard(2).then((result) => this.setState({seat3: 'nobus/' + result + '.png' }));
+        } else {
+          this.setState({seat3: 'nobus/blank.png'});
+        }
+      })
 
-    this.state.deckInstance.playerActive(3).then((bactive) => { 
-      var active = bactive.toNumber(); 
-      if(this.mySeat === 4 && active === 2) {
-        this.setState({seat4: 'nobus/flipside.png'});
-      } else if(active === 2) {
-        this.state.deckInstance.getCard(3).then((result) => this.setState({seat4: 'nobus/' + result + '.png' }));
-      } else {
-        this.setState({seat4: 'nobus/blank.png'});
-      }
+      this.state.deckInstance.playerActive(3).then((bactive) => { 
+        var active = bactive.toNumber(); 
+        if(this.mySeat === 4 && active === 2) {
+          this.setState({seat4: 'nobus/flipside.png'});
+        } else if(active === 2) {
+          this.state.deckInstance.getCard(3).then((result) => this.setState({seat4: 'nobus/' + result + '.png' }));
+        } else {
+          this.setState({seat4: 'nobus/blank.png'});
+        }
+      })
     })
   }
 
   bet() {
-    this.state.deckInstance.bet(20, this.mySeat);
-    this.setState({stack: this.state.stack - 20});
+    this.state.deckInstance.bet(20, this.mySeat - 1, {gas: 4000000});
   }
 
 
@@ -211,7 +241,7 @@ class App extends Component {
             
               <p> Winner: </p>
               <img style={cards} src={this.state.myCard}/>
-              <p>Current chipstack: {this.state.stack}</p>
+              <p>One: {this.state.stack[0]}, Two: {this.state.stack[1]}, Three: {this.state.stack[2]}, Four: {this.state.stack[3]}</p>
               <button onClick={() => this.takeSeat(0)}>Seat 1</button> 
               <button onClick={() => this.takeSeat(1)}>Seat 2</button>
               <button onClick={() => this.takeSeat(2)}>Seat 3</button> 
