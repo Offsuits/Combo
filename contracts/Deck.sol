@@ -4,7 +4,6 @@ contract Deck {
 
 	mapping (uint => Card) deck;
     mapping (uint => Player) players;
-	uint current = 0;
 
 
     struct Card {
@@ -14,21 +13,21 @@ contract Deck {
 
     struct Player {
         Card card;
-        bool active;
-        uint chips;
+        int8 active;
+        int chips;
         //uint seat;
     }
 
-    function sitDown(uint seat, uint chips) {
-        players[seat].active = true;
+    function sitDown(uint seat, int chips) {
+        players[seat].active = 2;
         players[seat].chips = chips;
     }
 
     function standUp(uint seat) {
-        players[seat].active = false;
+        players[seat].active = 0;
     }
 
-    function playerActive(uint seat) constant returns(bool) {
+    function playerActive(uint seat) constant returns(int8) {
         return players[seat].active;
     }
 
@@ -38,33 +37,11 @@ contract Deck {
         return players[seat].card.card;
 	}
 
-	function incrementCurrent() {
-		current++;
-	}
-
-	function shuffle() {
-		Card memory temp;
-		uint randCard;
-
-		for(uint i = 52; i > 0; i--) {
-			randCard = rand(i);
-			temp = deck[i - 1];
-			deck[i - 1] = deck[randCard];
-			deck[randCard] = temp;
-		}
-
-		current = 0;
-
-        for(i = 0; i < 4; i++) {
-            players[i].card = deck[i];
-        }
-	}
-
 	function winner() returns(uint) {
 		uint winner;
         uint score = 52;
         for(var i = 0; i < 4; i++) {
-            if(players[i].active && players[i].card.rank < score) {
+            if(players[i].active == 1 && players[i].card.rank < score) {
                 winner = i;
                 score = players[i].card.rank;
             }
@@ -73,9 +50,32 @@ contract Deck {
         return winner;
 	}
 
+    event SendStack(int chips);
+
+    function bet(int amount, uint seat) {
+        players[seat].chips = players[seat].chips - amount;
+        SendStack(players[seat].chips);
+    }
+
 	function getCard(uint index) constant returns(string) {
 		return players[index].card.card;
 	}
+
+    function shuffle() {
+        Card memory temp;
+        uint randCard;
+
+        for(uint i = 52; i > 0; i--) {
+            randCard = rand(i);
+            temp = deck[i - 1];
+            deck[i - 1] = deck[randCard];
+            deck[randCard] = temp;
+        }
+
+        for(i = 0; i < 4; i++) {
+            players[i].card = deck[i];
+        }
+    }
 
 
 	function Deck() {
@@ -115,31 +115,31 @@ contract Deck {
         uint index = 0;
 
         while(index < 4) {
-            players[index].active = false;
+            players[index].active = 0;
             index++;
         }
 	}
 
 	function rand(uint max) returns(uint) {
-		return uint(block.blockhash(block.number-1))%max + 1;
+		return uint(block.blockhash(block.number-1)) % max + 1;
 	}
 
 	function strConcat(string _a, string _b) internal returns (string){
-    bytes memory _ba = bytes(_a);
-    bytes memory _bb = bytes(_b);
+        bytes memory _ba = bytes(_a);
+        bytes memory _bb = bytes(_b);
 
-    string memory abcde = new string(_ba.length + _bb.length);
-    bytes memory babcde = bytes(abcde);
-    uint k = 0;
+        string memory abcde = new string(_ba.length + _bb.length);
+        bytes memory babcde = bytes(abcde);
+        uint k = 0;
 
-    for (uint i = 0; i < _ba.length; i++) babcde[k++] = _ba[i];
-    for (i = 0; i < _bb.length; i++) babcde[k++] = _bb[i];
- 
-    return string(babcde);
+        for (uint i = 0; i < _ba.length; i++) babcde[k++] = _ba[i];
+        for (i = 0; i < _bb.length; i++) babcde[k++] = _bb[i];
+     
+        return string(babcde);
 	}
 
 	function UintToString(uint v) constant returns (string) {
-    bytes32 ret;
+      bytes32 ret;
       if (v == 0) {
         ret = '0';
       }
@@ -160,7 +160,7 @@ contract Deck {
         }
       }
 
-    return string(bytesString);
+      return string(bytesString);
 	}
 
 	// function str2Bytes32(string memory source) returns (bytes32 result) {
@@ -169,10 +169,6 @@ contract Deck {
  //    }
 	// }
 
-	function values(string card) returns(uint){
-		uint value;
-
-	}
 }
 
 

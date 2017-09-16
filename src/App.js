@@ -29,7 +29,8 @@ class App extends Component {
       seat1: 'nobus/flipside.png',
       seat2: 'nobus/flipside.png',
       seat3: 'nobus/flipside.png',
-      seat4: 'nobus/flipside.png'
+      seat4: 'nobus/flipside.png',
+      stack: 1000,
     };
 
     this.mySeat = -1;
@@ -40,6 +41,7 @@ class App extends Component {
     this.winner = this.winner.bind(this);
     this.shuffle = this.shuffle.bind(this);
     this.takeSeat = this.takeSeat.bind(this);
+    this.bet = this.bet.bind(this);
 
   }
 
@@ -80,6 +82,9 @@ class App extends Component {
     
       deck.deployed().then((instance)=>{
         this.setState({ deckInstance: instance });
+        instance.SendStack().watch((err, event) => {
+          console.log(event.args.chips.toNumber());
+        });
       })
     })
   }
@@ -87,13 +92,13 @@ class App extends Component {
 
   takeSeat(seat) {
     if(seat !== -1){
-      this.state.deckInstance.sitDown(seat - 1, 1000);
-      this.mySeat = seat;
+      this.state.deckInstance.sitDown(seat, 1000);
+      this.mySeat = seat + 1;
     } else {
 
       if(this.mySeat !== -1){
         console.log('stand up');
-        this.state.deckInstance.standUp(this.mySeat - 1).then(() => this.mySeat = seat);
+        this.state.deckInstance.standUp(this.mySeat - 1).then(() => this.mySeat = seat + 1);
       }
     }
 
@@ -102,8 +107,6 @@ class App extends Component {
   winner() {
     this.state.deckInstance.calcWinner().then((card) => { 
       this.setState({ myCard: 'nobus/' + card + '.png' });
-      console.log(card); 
-      this.state.deckInstance.incrementCurrent(); 
     });
   }
 
@@ -114,64 +117,58 @@ class App extends Component {
   }
 
   deal() {  
-    this.state.deckInstance.playerActive(0).then((active) => {  
-      if(this.mySeat === 1 && active) {
+    this.state.deckInstance.playerActive(0).then((bactive) => {  
+      var active = bactive.toNumber();
+      console.log(bactive.toNumber());
+      if(this.mySeat === 1 && active === 2) {
         this.setState({seat1: 'nobus/flipside.png'});
-      } else if(active) {
+      } else if(active === 2) {
         this.state.deckInstance.getCard(0).then((result) => this.setState({seat1: 'nobus/' + result + '.png' }));
       } else {
         this.setState({seat1: 'nobus/blank.png' });
       }
     })
     
-    this.state.deckInstance.playerActive(1).then((active) => {  
-      if(this.mySeat === 2 && active) {
+    this.state.deckInstance.playerActive(1).then((bactive) => {  
+      var active = bactive.toNumber();
+      if(this.mySeat === 2 && active === 2) {
         this.setState({seat2: 'nobus/flipside.png'});
-      } else if(active) {
+      } else if(active === 2) {
         this.state.deckInstance.getCard(1).then((result) => this.setState({seat2: 'nobus/' + result + '.png' }));
       } else {
         this.setState({seat2: 'nobus/blank.png'});
       }
     })
 
-    this.state.deckInstance.playerActive(2).then((active) => {  
-      if(this.mySeat === 3 && active) {
+    this.state.deckInstance.playerActive(2).then((bactive) => {  
+      var active = bactive.toNumber();
+      if(this.mySeat === 3 && active === 2) {
         this.setState({seat3: 'nobus/flipside.png'});
-      } else if(active) {
+      } else if(active === 2) {
         this.state.deckInstance.getCard(2).then((result) => this.setState({seat3: 'nobus/' + result + '.png' }));
       } else {
         this.setState({seat3: 'nobus/blank.png'});
       }
     })
 
-    this.state.deckInstance.playerActive(3).then((active) => {  
-      if(this.mySeat === 4 && active) {
+    this.state.deckInstance.playerActive(3).then((bactive) => { 
+      var active = bactive.toNumber(); 
+      if(this.mySeat === 4 && active === 2) {
         this.setState({seat4: 'nobus/flipside.png'});
-      } else if(active) {
+      } else if(active === 2) {
         this.state.deckInstance.getCard(3).then((result) => this.setState({seat4: 'nobus/' + result + '.png' }));
       } else {
         this.setState({seat4: 'nobus/blank.png'});
       }
     })
-
-
-    // if(this.mySeat === 2) {
-    //   this.setState({seat2: 'nobus/flipside.png'})
-    // } else {
-    //   this.state.deckInstance.getCard(1).then((result) => this.setState({seat2: 'nobus/' + result + '.png' }));
-    // }
-    // if(this.mySeat === 3) {
-    //   this.setState({seat3: 'nobus/flipside.png'})
-    // } else {
-    //   this.state.deckInstance.getCard(2).then((result) => this.setState({seat3: 'nobus/' + result + '.png' }));
-    // }
-    // if(this.mySeat === 4) {
-    //   this.setState({seat4: 'nobus/flipside.png'})
-    // } else {
-    //   this.state.deckInstance.getCard(3).then((result) => this.setState({seat4: 'nobus/' + result + '.png' }));
-    // }
-    
   }
+
+  bet() {
+    this.state.deckInstance.bet(20, this.mySeat);
+    this.setState({stack: this.state.stack - 20});
+  }
+
+
     
 
   render() {
@@ -206,6 +203,7 @@ class App extends Component {
 
               <br/>
               
+              <button onClick={this.bet}>BET!</button>
               <button onClick={this.shuffle}>SHUFFLE! </button>
               <button onClick={this.deal}>DEAL! </button>
               <button onClick={this.winner}>Calc Winner! </button> 
@@ -213,11 +211,11 @@ class App extends Component {
             
               <p> Winner: </p>
               <img style={cards} src={this.state.myCard}/>
-              <p>Current chipstack: $500</p>
-              <button onClick={() => this.takeSeat(1)}>Seat 1</button> 
-              <button onClick={() => this.takeSeat(2)}>Seat 2</button>
-              <button onClick={() => this.takeSeat(3)}>Seat 3</button> 
-              <button onClick={() => this.takeSeat(4)}>Seat 4</button>
+              <p>Current chipstack: {this.state.stack}</p>
+              <button onClick={() => this.takeSeat(0)}>Seat 1</button> 
+              <button onClick={() => this.takeSeat(1)}>Seat 2</button>
+              <button onClick={() => this.takeSeat(2)}>Seat 3</button> 
+              <button onClick={() => this.takeSeat(3)}>Seat 4</button>
               <button onClick={() => this.takeSeat(-1)}>Stand Up</button>
             </div>
               
